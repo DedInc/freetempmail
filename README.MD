@@ -12,7 +12,7 @@ You must have Google Chrome installed for token generation!
 <h2 align="center"> -Quickstart- </h2>
 
 ```python
-from freetempmail import as ft
+import freetempmail as ft
 
 if __name__ == '__main__':
 	ft.generateMail() #you can use generateMail(chromeVersion), by default it detects it automatically Example: generateMail(101)
@@ -27,7 +27,7 @@ if __name__ == '__main__':
 <h2 align="center"> -Detect and get a new message- </h2>
 
 ```python
-from freetempmail import as ft
+import freetempmail as ft
 
 if __name__ == '__main__':
 	ft.generateMail()
