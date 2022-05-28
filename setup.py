@@ -22,6 +22,6 @@ setup(
     ],
     packages=find_packages(),
     include_package_data = True,
-    install_requires = ['undetected-chromedriver'],
+    install_requires = ['undetected-chromedriver', 'requests >= 2.9.2', 'requests_toolbelt >= 0.9.1', 'pyparsing >= 2.4.7'],
     python_requires='>=3.6'
 )
