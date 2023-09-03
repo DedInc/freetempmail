@@ -1,75 +1,86 @@
-from os import environ as env, access, sep, listdir, X_OK
-from os.path import exists, normpath
-from sys import platform
-from time import sleep
-from freetempmail.cloudscraper import create_scraper
-from undetected_chromedriver import Chrome, ChromeOptions
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
+import asyncio
+import time
+import pyppeteer
+from cloudscraper import create_scraper
 
+class FreeTempMail:
+    """A class to interact with temporary email services."""
 
-s = authHeaders = version = None
+    def __init__(self, proxy=None):
+        """Initialize with optional proxy settings."""
+        self.proxy = proxy
+        self.scraper = None
+        self.auth_headers = None
+        self.loop = asyncio.get_event_loop()
+        if not isinstance(proxy, (type(None), str)):
+            raise TypeError("Proxy must be a string or None")
 
+    async def _launch_browser(self):
+        """Launch a headless browser with optional proxy."""
+        browser_args = {
+            'headless': True,
+            'args': [
+                '--disable-dev-shm-usage',
+                '--no-sandbox',
+                '--no-first-run',
+                '--no-service-autorun',
+                '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1788.0'
+            ]
+        }
 
-def getChrome():
-    global version
-    candidates = set()
-    for item in map(
-            env.get, ("PROGRAMFILES", "PROGRAMFILES(X86)", "LOCALAPPDATA")
-    ):
-        for subitem in (
-                "Google/Chrome/Application",
-                "Google/Chrome Beta/Application",
-                "Google/Chrome Canary/Application",
-        ):
-            try:
-                candidates.add(sep.join((item, subitem, "chrome.exe")))
-            except:
-                pass
-    for candidate in candidates:
-        if exists(candidate) and access(candidate, X_OK):
-            path = normpath(candidate)
-            version = int(listdir(path.split('Application')[0] + 'Application')[0].split('.')[0])
-            return path
+        if self.proxy:
+            browser_args['args'].append(f'--proxy-server={self.proxy}')
 
+        browser = await pyppeteer.launch(browser_args)
+        return browser
 
-def generateMail(ver=None):
-    global authHeaders, s
-    options = ChromeOptions()
-    options.add_argument('--headless')
-    options.add_argument('--disable-dev-shm-usage')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--no-first-run')
-    options.add_argument('--no-service-autorun')
-    if 'win' in platform:
-        options.binary_location = getChrome()
-        ver = version
-    driver = Chrome(options=options, version_main=ver)
-    driver.get('https://temp-mail.org/')
-    for cookie in driver.get_cookies():
-        if cookie['name'] == 'token':
-            driver.quit()
-            authHeaders = {'Authorization': 'Bearer ' + cookie['value']}
-            s = create_scraper()
+    async def _get_cookie(self, browser):
+        """Fetch a 'token' cookie from temp-mail.org."""
+        page = await browser.newPage()
+        await page.goto('https://temp-mail.org/')
+        cookie = [cookie for cookie in await page.cookies() if cookie['name'] == 'token']
+        await browser.close()
+        if not cookie:
+            raise ValueError("Could not fetch 'token' cookie")
+        return cookie[0]['value']
 
+    def _create_scraper(self, token):
+        """Create a scraper instance with auth headers."""
+        if not isinstance(token, str):
+            raise TypeError("Token must be a string")
+        self.auth_headers = {'Authorization': 'Bearer ' + token}        
+        self.scraper = create_scraper()
 
-def getEmail():
-    return s.get('https://web2.temp-mail.org/mailbox', headers=authHeaders).json()['mailbox']
+    async def generate_mail(self):
+        """Generate a temporary email by launching a browser and fetching a token."""
+        browser = await self._launch_browser()
+        token = await self._get_cookie(browser)
+        self._create_scraper(token)
 
+    def get_email(self):
+        """Fetch mailbox info."""
+        if not self.auth_headers:
+            raise RuntimeError("Must call generate_mail() before fetching email info")
+        return self.scraper.get('https://web2.temp-mail.org/mailbox', headers=self.auth_headers).json()['mailbox']
 
-def getMessages():
-    return s.get('https://web2.temp-mail.org/messages', headers=authHeaders).json()['messages']
+    def get_messages(self):
+        """Fetch messages in mailbox."""
+        if not self.auth_headers:
+            raise RuntimeError("Must call generate_mail() before fetching messages")
+        return self.scraper.get('https://web2.temp-mail.org/messages', headers=self.auth_headers).json()['messages']
 
+    def get_message(self, id):
+        """Fetch a specific message by ID."""
+        if not isinstance(id, str):
+            raise TypeError("ID must be a string")
+        if not self.auth_headers:
+            raise RuntimeError("Must call generate_mail() before fetching a message")
+        return self.scraper.get(f'https://web2.temp-mail.org/messages/{id}', headers=self.auth_headers).json()
 
-def getMessage(id):
-    return s.get(f'https://web2.temp-mail.org/messages/{id}', headers=authHeaders).json()
-
-
-def waitMessage():
-    messages = getMessages()
-    i = len(messages)
-    while len(messages) <= i:
-        messages = getMessages()
-        sleep(5)
-    return getMessage(messages[i]['_id'])
+    def wait_message(self):
+        """Wait for a message to arrive in mailbox."""
+        messages = self.get_messages()        
+        while not messages:
+            messages = self.get_messages()
+            time.sleep(5)
+        return self.get_message(messages[-1]['_id'])

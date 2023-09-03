@@ -5,7 +5,7 @@ with open('README.md', 'r', encoding='utf-8') as f:
 
 setup(
     name='freetempmail',
-    version='1.0.2',
+    version='1.0.3',
     author='Maehdakvan',
     author_email='visitanimation@google.com',
     description='Temp-Mail.org API wrapper.',
@@ -22,6 +22,6 @@ setup(
     ],
     packages=find_packages(),
     include_package_data = True,
-    install_requires = ['undetected-chromedriver', 'requests >= 2.9.2', 'requests_toolbelt >= 0.9.1', 'pyparsing >= 2.4.7'],
+    install_requires = ['asyncio', 'pyppeteer', 'cloudscraper'],
     python_requires='>=3.6'
 )

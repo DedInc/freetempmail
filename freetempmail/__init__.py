@@ -1,2 +1,2 @@
 # -*- coding: utf-8 -*-
-from .freetempmail import *
+from .freetempmail import FreeTempMail

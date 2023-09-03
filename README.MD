@@ -1,38 +1,39 @@
-
-
 <h1 align="center">freetempmail - Temp-Mail.org API wrapper.</h1>
-<h1 align="center"> -WARINING!!!- </h1>
 
-```
-You must have Google Chrome installed for token generation!
-```
+<h3 align="center">How to Use?</h3>
 
-<h1 align="center"> -How to use?- </h1>
-
-<h2 align="center"> -Quickstart- </h2>
+<h4 align="center">Quickstart Guide</h4>
 
 ```python
-import freetempmail as ft
+import asyncio
+from freetempmail import FreeTempMail
 
 if __name__ == '__main__':
-	ft.generateMail() #you can use generateMail(chromeVersion), by default it detects it automatically Example: generateMail(101)
-	email = ft.getEmail() #returns email
-	print(email)
-	messages = ft.getMessages() #get messages
-	print(messages)
-	message = messages[0]['_id'] #read a first message
-	print(message)
+    ftm = FreeTempMail()  # Instantiate class
+    asyncio.run(ftm.generate_mail())  # Generate a temporary mail
+    email = ftm.get_email()  # Fetch email info
+    print(email)
+
+    messages = ftm.get_messages()  # Fetch messages in mailbox
+    print(messages)
+
+    message_id = messages[0]['_id']  # Fetch a specific message by ID
+    message_content = ftm.get_message(message_id)
+    print(message_content)
 ```
 
-<h2 align="center"> -Detect and get a new message- </h2>
+<h4 align="center">Receive and Process a New Message</h4>
 
 ```python
-import freetempmail as ft
+import asyncio
+from freetempmail import FreeTempMail
 
 if __name__ == '__main__':
-	ft.generateMail()
-	email = ft.getEmail() #returns email
-	#This send message function or wait
-	message = ft.waitMessage() #wait and get a new message
-	print(message)
+    ftm = FreeTempMail()  # Instantiate class
+    asyncio.run(ftm.generate_mail())  # Generate a temporary mail
+    email = ftm.get_email()  # Fetch email info
+    print(email)
+
+    new_message = ftm.wait_message()  # Wait and fetch a new message
+    print(new_message)
 ```
