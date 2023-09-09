@@ -37,6 +37,11 @@ class FreeTempMail:
     async def _get_cookie(self, browser):
         """Fetch a 'token' cookie from temp-mail.org."""
         page = await browser.newPage()
+
+        # Intercept network requests
+        await page.setRequestInterception(True)
+        page.on('request', lambda req: asyncio.ensure_future(self._intercept_request(req)))
+
         await page.goto('https://temp-mail.org/')
         cookie = [cookie for cookie in await page.cookies() if cookie['name'] == 'token']
         await browser.close()
@@ -44,11 +49,18 @@ class FreeTempMail:
             raise ValueError("Could not fetch 'token' cookie")
         return cookie[0]['value']
 
+    async def _intercept_request(self, request):
+        """Abort unnecessary requests."""
+        if request.resourceType in ['image', 'stylesheet', 'font', 'media', 'texttrack', 'eventsource']:
+            await request.abort()
+        else:
+            await request.continue_()
+
     def _create_scraper(self, token):
         """Create a scraper instance with auth headers."""
         if not isinstance(token, str):
             raise TypeError("Token must be a string")
-        self.auth_headers = {'Authorization': 'Bearer ' + token}        
+        self.auth_headers = {'Authorization': 'Bearer ' + token}
         self.scraper = create_scraper()
 
     async def generate_mail(self):
@@ -79,7 +91,7 @@ class FreeTempMail:
 
     def wait_message(self):
         """Wait for a message to arrive in mailbox."""
-        messages = self.get_messages()        
+        messages = self.get_messages()
         while not messages:
             messages = self.get_messages()
             time.sleep(5)
